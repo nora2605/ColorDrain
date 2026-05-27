@@ -1,19 +1,45 @@
 ﻿using Raylib_cs;
-using ColorDrain;
+using ColorDrain.Scenes;
+using ColorDrain.IO;
+using ColorDrain.UI;
 
-Level l = new();
+Runtime.Save.Load();
 
-Raylib.SetConfigFlags(ConfigFlags.Msaa4xHint | ConfigFlags.TopmostWindow);
-Raylib.InitWindow(900, 900, "Color Drain");
+Raylib.SetConfigFlags(ConfigFlags.Msaa4xHint | ConfigFlags.ResizableWindow);
+Raylib.InitWindow(800, 600, "Color Drain");
+Raylib.SetWindowMinSize(800, 600);
+Raylib.SetWindowMaxSize(3840, 2160);
 
-while (!Raylib.WindowShouldClose())
+Raylib.InitAudioDevice();
+
+Runtime.CurrentScene = new Title();
+
+while (!Raylib.WindowShouldClose() && !Runtime.ShouldClose)
 {
-    l.Update();
+    Runtime.CurrentScene.Update();
 
     Raylib.BeginDrawing();
-    Raylib.ClearBackground(Color.RayWhite);
-    l.Render();
+    Runtime.CurrentScene.Render();
     Raylib.EndDrawing();
 }
 
 Raylib.CloseWindow();
+
+internal static class Runtime
+{
+    internal static bool ShouldClose { get; private set; } = false;
+    internal static Scene? CurrentScene { get; set; }
+    internal static SaveState Save { get; } = new SaveState();
+
+    internal static void Exit()
+    {
+        Save.Save();
+        ShouldClose = true;
+    }
+
+    internal static void SceneTransition(Scene newScene)
+    {
+        CurrentScene?.Dispose();
+        CurrentScene = newScene;
+    }
+}

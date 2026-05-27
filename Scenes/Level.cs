@@ -1,28 +1,36 @@
 ﻿using Raylib_cs;
-using SubColor = (int C, int M, int Y);
-using Coord = (int x, int y);
+using ColorDrain.UI;
+using ColorDrain.IO;
+using ColorDrain.Maths;
+using ColorDrain.Objects;
+using System.Numerics;
 
-namespace ColorDrain;
-internal class Level
+namespace ColorDrain.Scenes;
+
+internal class Level : Scene
 {
-
+    private LevelInfo levelInfo;
     private Element[,] field;
     private bool[,] polarities;
     private int w, h;
 
-    const int OFFSET_X = 50;
-    const int OFFSET_Y = 50;
-    const int GRID_SIZE = 100;
-    const float LINE_STRENGTH = 5.0f;
+    int OFFSET_X = 50;
+    int OFFSET_Y = 50;
+    int GRID_SIZE = 100;
+    float LINE_WIDTH = 5.0f;
+    int TEXT_SIZE = 20;
 
     private int movesMade = 0;
 
-    public Level()
+    public Level(LevelInfo template)
     {
-        w = 4; h = 4;
+        levelInfo = template;
+        w = levelInfo.Width;
+        h = levelInfo.Height;
         field = new Element[w, h];
         polarities = new bool[w, h];
-        Reset();
+        Init();
+        RecalculateLayout();
     }
 
     private void InitField(int x, int y, bool drain, SubColor color)
@@ -31,19 +39,24 @@ internal class Level
         field[x, y] = new Element(!drain, drain, color);
     }
 
-    private void Reset()
+    private void Init()
     {
         field = new Element[w, h];
         polarities = new bool[w, h];
         movesMade = 0;
 
-        InitField(0, 0, true, (1, 1, 0));
-        InitField(1, 0, true, (1, 2, 1));
-        InitField(2, 0, true, (0, 1, 1));
-        InitField(3, 0, true, (0, 0, 1));
-        InitField(1, 2, false, (0, 1, 0));
-        InitField(3, 2, false, (1, 0, 0));
-        InitField(2, 3, false, (0, 0, 1));
+        foreach (var el in levelInfo.Elements)
+        {
+            switch (el)
+            {
+                case Droplet dr:
+                    InitField(dr.Position.X, dr.Position.Y, false, dr.SColor);
+                    break;
+                case Drain d:
+                    InitField(d.Position.X, d.Position.Y, true, d.SColor);
+                    break;
+            }
+        }
     }
 
     public void Update()
@@ -61,7 +74,7 @@ internal class Level
         }
 
         if (Raylib.IsKeyPressed(KeyboardKey.R))
-            Reset();
+            Init();
 
         for (int x = 0; x < w; x++)
         {
@@ -75,7 +88,7 @@ internal class Level
                         field[x, y] = Element.Empty;
                         continue;
                     }
-                    foreach (var (nx, ny) in GetNeighbors(x, y))
+                    foreach (var (nx, ny) in new Coord(x, y).GetNeighbors(w, h))
                     {
                         if (!polarities[nx, ny]) continue;
                         Element n = field[nx, ny];
@@ -107,11 +120,11 @@ internal class Level
         bool[,] visited = new bool[w, h];
         while (toCheck.TryDequeue(out Coord f))
         {
-            if (field[f.x, f.y].Filled && !field[f.x, f.y].Drain)
+            if (field[f.X, f.Y].Filled && !field[f.X, f.Y].Drain)
             {
-                field[f.x, f.y] = Element.Empty;
-                visited[f.x, f.y] = true;
-                foreach (var (nx, ny) in GetNeighbors(f.x, f.y))
+                field[f.X, f.Y] = Element.Empty;
+                visited[f.X, f.Y] = true;
+                foreach (var (nx, ny) in f.GetNeighbors(w, h))
                 {
                     if (!visited[nx, ny] && polarities[nx, ny])
                         toCheck.Enqueue((nx, ny));
@@ -129,40 +142,62 @@ internal class Level
         bool[,] visited = new bool[w, h];
         while (toCheck.TryDequeue(out Coord f))
         {
-            visited[f.x, f.y] = true;
-            Element el = field[f.x, f.y];
+            visited[f.X, f.Y] = true;
+            Element el = field[f.X, f.Y];
             if (el.Filled && !el.Drain)
             {
                 colorsInRegion.Add(el.SColor);
                 region.Add(f);
-                foreach (var (nx, ny) in GetNeighbors(f.x, f.y))
+                foreach (var (nx, ny) in f.GetNeighbors(w, h))
                 {
                     if (!visited[nx, ny] && polarities[nx, ny])
                         toCheck.Enqueue((nx, ny));
                 }
             }
         }
-        SubColor newColor = Element.Mix(colorsInRegion);
+        var newColor = SubColor.Mix(colorsInRegion);
         foreach ((int fx, int fy) in region)
             field[fx, fy] = new Element(true, false, newColor);
     }
 
-    private List<Coord> GetNeighbors(int x, int y)
+    public bool CheckWin() => field.Cast<Element>().All(e => e.Drain == e.Filled);
+    public bool CheckKey() => Enumerable.Range(0, w).All(x => Enumerable.Range(0, h).All(y => field[x, y].Drain || !polarities[x, y]));
+
+    private void RecalculateLayout()
     {
-        List<Coord> neighbors = [];
-        if (x > 0) neighbors.Add((x - 1, y));
-        if (x < w - 1) neighbors.Add((x + 1, y));
-        if (y > 0) neighbors.Add((x, y - 1));
-        if (y < h - 1) neighbors.Add((x, y + 1));
-        return neighbors;
+        if (w == 0 || h == 0) return;
+        int w_width = Raylib.GetRenderWidth();
+        int w_height = Raylib.GetRenderHeight();
+
+        GRID_SIZE = Math.Min((int)(2/3f * (w_width - 2 * OFFSET_X) / w), (w_height - 2 * OFFSET_Y) / h);
+        LINE_WIDTH = GRID_SIZE / 30f;
+        TEXT_SIZE = Math.Min(GRID_SIZE / 5, OFFSET_Y - 10);
+        Rlgl.SetLineWidth(LINE_WIDTH);
+
+        if (hollowCircle != null)
+            Raylib.UnloadRenderTexture(hollowCircle.Value);
+        hollowCircle = Raylib.LoadRenderTexture(GRID_SIZE, GRID_SIZE);
+        Raylib.BeginTextureMode(hollowCircle.Value);
+        Raylib.ClearBackground(Color.Blank);
+        Raylib.DrawCircle(GRID_SIZE / 2, GRID_SIZE / 2, GRID_SIZE / 4 + LINE_WIDTH / 2, Color.DarkGray);
+        Raylib.BeginBlendMode(BlendMode.SubtractColors);
+        Raylib.DrawCircle(GRID_SIZE / 2, GRID_SIZE / 2, GRID_SIZE / 4 - LINE_WIDTH / 2, Color.White);
+        Raylib.EndBlendMode();
+        Raylib.EndTextureMode();
     }
 
-    public bool CheckWin() => field.Cast<Element>().All(e => e.Drain == e.Filled);
+    RenderTexture2D? hollowCircle = null;
 
     public void Render()
     {
-        Raylib.DrawText($"Moves: {movesMade}", 12, 12, 20, Color.DarkGray);
-        Raylib.DrawRectangleLinesEx(new Rectangle(OFFSET_X, OFFSET_Y, GRID_SIZE * w, GRID_SIZE * h), LINE_STRENGTH, Color.Black);
+        Raylib.ClearBackground(Color.RayWhite);
+        if (Raylib.IsWindowResized())
+            RecalculateLayout();
+
+        Raylib.DrawText($"Level {levelInfo.Chapter}-{levelInfo.LevelNum}: {levelInfo.Name}", OFFSET_X, 12, TEXT_SIZE, Color.DarkGray);
+        Raylib.DrawText($"Moves: {movesMade}", 2 * OFFSET_X + w * GRID_SIZE, 2 * OFFSET_Y, TEXT_SIZE, Color.DarkGray);
+        
+        Raylib.DrawRectangleLinesEx(new Rectangle(OFFSET_X, OFFSET_Y, GRID_SIZE * w, GRID_SIZE * h), LINE_WIDTH, Color.Black);
         for (int y = 0; y < h; y++)
         {
             for (int x = 0; x < w; x++)
@@ -170,28 +205,28 @@ internal class Level
                 int cx = OFFSET_X + x * GRID_SIZE;
                 int cy = OFFSET_Y + y * GRID_SIZE;
                 bool pol = polarities[x, y];
-                if (!pol) Raylib.DrawCircleLines(cx + GRID_SIZE / 2, cy + GRID_SIZE / 2, GRID_SIZE/4, Color.Gray);
+                if (!pol) Raylib.DrawTexture(hollowCircle!.Value.Texture, cx, cy, Color.White);
                 Element el = field[x, y];
                 if (el.Drain)
                 {
                     Rectangle r = new(cx + GRID_SIZE/4, cy + GRID_SIZE/4, GRID_SIZE/2, GRID_SIZE/2);
                     if (el.Filled)
-                        Raylib.DrawRectangleRec(r, el.GetRGB());
+                        Raylib.DrawRectangleRec(r, el.SColor);
                     else
-                        Raylib.DrawRectangleLinesEx(r, LINE_STRENGTH, el.GetRGB());
+                        Raylib.DrawRectangleLinesEx(r, LINE_WIDTH, el.SColor);
                 }
                 else if (el.Filled)
                 {
-                    Raylib.DrawCircle(cx + GRID_SIZE/2, cy + GRID_SIZE/2, GRID_SIZE/4, el.GetRGB());
-                    foreach (var (nx, ny) in GetNeighbors(x, y))
+                    Raylib.DrawCircle(cx + GRID_SIZE/2, cy + GRID_SIZE/2, GRID_SIZE/4, el.SColor);
+                    foreach (var (nx, ny) in new Coord(x, y).GetNeighbors(w, h))
                     {
                         Element n = field[nx, ny];
                         if (n.SColor == el.SColor && !n.Drain)
                         {
                             if (x != nx)
-                                Raylib.DrawRectangle(OFFSET_X + Math.Min(x, nx) * GRID_SIZE + GRID_SIZE/2, cy + GRID_SIZE/4, GRID_SIZE, GRID_SIZE/2, el.GetRGB());
+                                Raylib.DrawRectangle(OFFSET_X + Math.Min(x, nx) * GRID_SIZE + GRID_SIZE/2, cy + GRID_SIZE/4, GRID_SIZE, GRID_SIZE/2, el.SColor);
                             else
-                                Raylib.DrawRectangle(cx + GRID_SIZE/4, OFFSET_Y + Math.Min(y, ny) * GRID_SIZE + GRID_SIZE/2, GRID_SIZE/2, GRID_SIZE, el.GetRGB());
+                                Raylib.DrawRectangle(cx + GRID_SIZE/4, OFFSET_Y + Math.Min(y, ny) * GRID_SIZE + GRID_SIZE/2, GRID_SIZE/2, GRID_SIZE, el.SColor);
                         }
                     }
                 }
@@ -205,20 +240,25 @@ internal class Level
                 Coord[] bordering = [(x, y), (x + 1, y), (x, y + 1), (x + 1, y + 1)];
                 int cx = OFFSET_X + x * GRID_SIZE;
                 int cy = OFFSET_Y + y * GRID_SIZE;
-                if (bordering.Select(c => (same: true, el: field[c.x, c.y])).Aggregate((c, a) => (c.same && c.el.SColor == a.el.SColor, a.el)).same)
+                if (bordering.Select(c => (same: true, el: field[c.X, c.Y])).Aggregate((c, a) => (c.same && c.el.SColor == a.el.SColor, a.el)).same)
                 {
                     Element el = field[x, y];
                     if (el.Filled && !el.Drain)
-                        Raylib.DrawRectangle(cx + GRID_SIZE/2, cy + GRID_SIZE/2, GRID_SIZE, GRID_SIZE, el.GetRGB());
+                        Raylib.DrawRectangle(cx + GRID_SIZE/2, cy + GRID_SIZE/2, GRID_SIZE, GRID_SIZE, el.SColor);
                 }
-                // else Raylib.DrawCircle((int)cx + (int)GRID_SIZE, (int)cy + (int)GRID_SIZE, LINE_STRENGTH, Color.Gray);
             }
         }
 
         if (CheckWin())
         {
-            Raylib.DrawText("You win!", OFFSET_X + w * GRID_SIZE + 20, OFFSET_Y + 20, 20, Color.Black);
+            Raylib.DrawText($"You win! Grade: {(movesMade <= levelInfo.MoveThresh.Yel ? CheckKey() ? "Key" : "Yellow" : movesMade <= levelInfo.MoveThresh.Mag ? "Magenta" : "Cyan")}", 2 * OFFSET_X + w * GRID_SIZE, 3*OFFSET_Y, 20, Color.Black);
         }
+    }
+
+    public void Dispose()
+    {
+        if (hollowCircle != null)
+            Raylib.UnloadRenderTexture(hollowCircle.Value);
     }
 }
 
@@ -227,30 +267,6 @@ struct Element(bool Filled, bool Drain, (int C, int M, int Y) CMY)
     public bool Filled { get; set; } = Filled;
     public bool Drain { get; } = Drain;
     public SubColor SColor { get; } = CMY;
-
-    public readonly Color GetRGB()
-    {
-        float max = ((int[])[SColor.C, SColor.M, SColor.Y, 1]).Max();
-        return new Color(
-            1f - (SColor.C / max),
-            1f - (SColor.M / max),
-            1f - (SColor.Y / max)
-        );
-    }
-
-    public static SubColor Mix(IEnumerable<SubColor> a) => Normalize(a.Sum(e => e.C), a.Sum(e => e.M), a.Sum(e => e.Y));
-
-    private static SubColor Normalize(int C, int M, int Y)
-    {
-        int gcd = GCD(GCD(C, M), Y);
-        return (C / gcd, M / gcd, Y / gcd);
-    }
-
-    private static int GCD(int a, int b)
-    {
-        if (b == 0) return a;
-        return GCD(b, a % b);
-    }
 
     public static Element Empty = new(false, false, (0, 0, 0));
 }
