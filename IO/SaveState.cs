@@ -18,9 +18,7 @@ internal class SaveState
             new SaveState().Save();
         }
         string[] lines = File.ReadAllLines(SavePath);
-        int[][] completion = [.. lines.Select(l => l.Split(',').Select(int.Parse).ToArray()).ToArray()];
-        levelCompletion = new int[completion.Length][];
-        levelCompletion[0] = completion[0];
+        levelCompletion = [.. lines.Select(l => l.Split(',').Select(int.Parse).ToArray()).ToArray()];
     }
 
     public void Save()
