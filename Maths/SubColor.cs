@@ -13,6 +13,9 @@ internal struct SubColor(int C, int M, int Y) : IEquatable<SubColor>
     private static SubColor Normalize(int C, int M, int Y)
     {
         int gcd = GCD(GCD(C, M), Y);
+        // large number prevention !!
+        if (((int[])[C, M, Y]).Any(i => i > int.MaxValue / 4))
+            gcd++;
         return new(C / gcd, M / gcd, Y / gcd);
     }
     public readonly Color GetRGB()

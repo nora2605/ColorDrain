@@ -14,13 +14,13 @@ internal class Level : Scene
     private bool[,] polarities;
     private int w, h;
 
+    private List<Coord> solution = [];
+
     int OFFSET_X = 50;
     int OFFSET_Y = 50;
     int GRID_SIZE = 100;
     float LINE_WIDTH = 5.0f;
     int TEXT_SIZE = 20;
-
-    private int movesMade = 0;
 
     public Level(LevelInfo template)
     {
@@ -43,7 +43,7 @@ internal class Level : Scene
     {
         field = new Element[w, h];
         polarities = new bool[w, h];
-        movesMade = 0;
+        solution = [];
 
         foreach (var el in levelInfo.Elements)
         {
@@ -69,7 +69,7 @@ internal class Level : Scene
             if (x >= 0 && x < w && y >= 0 && y < h && !field[x, y].Drain)
             {
                 polarities[x, y] = !polarities[x, y];
-                movesMade++;
+                solution.Add((x, y));
             }
         }
 
@@ -195,7 +195,7 @@ internal class Level : Scene
             RecalculateLayout();
 
         Raylib.DrawText($"Level {levelInfo.Chapter}-{levelInfo.LevelNum}: {levelInfo.Name}", OFFSET_X, 12, TEXT_SIZE, Color.DarkGray);
-        Raylib.DrawText($"Moves: {movesMade}", 2 * OFFSET_X + w * GRID_SIZE, 2 * OFFSET_Y, TEXT_SIZE, Color.DarkGray);
+        Raylib.DrawText($"Moves: {solution.Count}", 2 * OFFSET_X + w * GRID_SIZE, 2 * OFFSET_Y, TEXT_SIZE, Color.DarkGray);
         
         Raylib.DrawRectangleLinesEx(new Rectangle(OFFSET_X, OFFSET_Y, GRID_SIZE * w, GRID_SIZE * h), LINE_WIDTH, Color.Black);
         for (int y = 0; y < h; y++)
@@ -251,9 +251,15 @@ internal class Level : Scene
 
         if (CheckWin())
         {
-            Raylib.DrawText($"You win! Grade: {(movesMade <= levelInfo.MoveThresh.Yel ? CheckKey() ? "Key" : "Yellow" : movesMade <= levelInfo.MoveThresh.Mag ? "Magenta" : "Cyan")}", 2 * OFFSET_X + w * GRID_SIZE, 3*OFFSET_Y, 20, Color.Black);
+            if (!written)
+            {
+                Console.WriteLine(string.Join(";", solution));
+                written = true;
+            }
+            Raylib.DrawText($"You win! Grade: {(solution.Count <= levelInfo.MoveThresh.Yel ? CheckKey() ? "Key" : "Yellow" : solution.Count <= levelInfo.MoveThresh.Mag ? "Magenta" : "Cyan")}", 2 * OFFSET_X + w * GRID_SIZE, 3*OFFSET_Y, 20, Color.Black);
         }
     }
+    bool written = false;
 
     public void Dispose()
     {

@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <Folder Include="Assets\Backgrounds\" />
+    <Folder Include="Assets\Solutions\" />
   </ItemGroup>
 
 </Project>
