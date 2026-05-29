@@ -106,6 +106,7 @@ internal class Level : Scene
                         {
                             if (n.SColor != el.SColor)
                                 ColorConnectedRegion(x, y);
+                            el = field[x, y];
                         }
                         else field[nx, ny] = new Element(true, false, el.SColor);
                     }
