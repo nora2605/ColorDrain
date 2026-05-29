@@ -44,6 +44,7 @@ internal class Level : Scene
         field = new Element[w, h];
         polarities = new bool[w, h];
         solution = [];
+        written = false;
 
         foreach (var el in levelInfo.Elements)
         {
