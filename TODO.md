@@ -4,6 +4,7 @@
   - bread tastes better than key (get key grade once idfk)
 - braindead layout engine
   - better buttons
+  - inspo: (https://www.youtube.com/watch?v=by9lQvpvMIc)[clay's layout algorithm]
 - dialog system for story (#niche)
 - music and sfx
   - menu theme
@@ -11,9 +12,10 @@
   - click sfx, spread sfx, mix sfx, drain sfx
 - level progression (back, reset, next buttons; grading system for select menu, solution sharer, hint system)
 - level builder
+- translation pack support (priority fetching via Runtime singleton)
 - story
   - axel prink (intern supervisor)
-  - mister olovich (manager)
+  - mistor olovich (manager)
   - iris tau (printer ceo)
   - kiki tau (assassin)
 
