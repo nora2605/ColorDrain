@@ -55,7 +55,7 @@ internal class LevelSelect : Scene
                 clickedRow * 5 + clickedCol < levelTable[currentChapter].Length
             )
             {
-                Runtime.SceneTransition(new Level(levelTable[currentChapter][clickedRow * 5 + clickedCol]));
+                Runtime.SceneTransition(new LevelScene(levelTable[currentChapter][clickedRow * 5 + clickedCol]));
             }
         }
     }

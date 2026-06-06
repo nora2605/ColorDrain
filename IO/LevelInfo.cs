@@ -1,4 +1,4 @@
-﻿using ColorDrain.Objects;
+﻿using ColorDrain.Game;
 using Raylib_cs;
 
 namespace ColorDrain.IO;
@@ -58,7 +58,7 @@ internal struct LevelInfo
             case "Droplet":
             {
                 int[] args = [.. tokens.Skip(1).Select(int.Parse)];
-                return new Droplet((args[0], args[1]), (args[2], args[3], args[4]));
+                return new InitialDroplet((args[0], args[1]), (args[2], args[3], args[4]));
             }
             default:
                 throw new FormatException($"Unrecognized Element: {tokens[0]}");

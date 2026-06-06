@@ -12,6 +12,8 @@ Raylib.SetWindowMaxSize(3840, 2160);
 
 Raylib.InitAudioDevice();
 
+Raylib.SetTargetFPS(Raylib.GetMonitorRefreshRate(Raylib.GetCurrentMonitor()));
+
 Runtime.CurrentScene = new Title();
 
 while (!Raylib.WindowShouldClose() && !Runtime.ShouldClose)

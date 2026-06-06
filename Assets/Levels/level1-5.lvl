@@ -1,0 +1,11 @@
+1:5:any drain's a goal
+5x4
+45:39
+Drain (0, 0) (0, 1, 1)
+Drain (1, 0) (0, 0, 1)
+Drain (2, 0) (1, 0, 1)
+Drain (3, 0) (1, 1, 0)
+Drain (4, 0) (1, 1, 1)
+Droplet (0, 3) (1, 0, 0)
+Droplet (2, 3) (0, 1, 0)
+Droplet (4, 3) (0, 0, 1)
