@@ -31,6 +31,7 @@ internal class LevelSelect : Scene
         buttonPrev = new Button("<", 20, 20, 50, 50);
 
         currentChapter = 0;
+        RecalculateLayout();
     }
 
     public void Update()

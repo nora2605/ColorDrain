@@ -47,6 +47,10 @@ internal class LevelScene : Scene
                 case 'z':
                     level.Undo();
                     break;
+                case 'B':
+                case 'b':
+                    Runtime.SceneTransition(new LevelSelect());
+                    break;
             }
             keycode = (char)Raylib.GetCharPressed();
         }
