@@ -1,6 +1,6 @@
 # Level File Format
 
-First Line: `chapter`:`level`:`name`
+First Line: `chapter`:`level`
 
 Second Line: `width`x`height`
 

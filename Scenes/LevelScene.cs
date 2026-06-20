@@ -3,6 +3,8 @@ using ColorDrain.UI;
 using ColorDrain.IO;
 using ColorDrain.Maths;
 using ColorDrain.Game;
+using static ColorDrain.IO.AssetManager;
+using ColorDrain.UI.Controls;
 
 namespace ColorDrain.Scenes;
 
@@ -10,18 +12,84 @@ internal class LevelScene : Scene
 {
     private Level level;
 
-    private string[] gradeStrings = ["Cyan", "Magenta", "Yellow", "Key"];
+    private Button buttonReset;
+    private Button buttonUndo;
+    private Button buttonBack;
+    private Button buttonNext;
 
-    int OFFSET_X = 50;
-    int OFFSET_Y = 50;
+    List<Control> controls;
+
+    int OFFSET_X = 30;
+    int OFFSET_Y = 40;
     int GRID_SIZE = 100;
     float LINE_WIDTH = 5.0f;
     int TEXT_SIZE = 20;
 
+    Texture2D armsCrossed;
+
     public LevelScene(LevelInfo template)
     {
         level = new(template);
-        RecalculateLayout();
+        armsCrossed = Raylib.LoadTexture(GetPath("Sprites/axel.png"));
+
+        int w = level.Width; int h = level.Height;
+        int w_width = Raylib.GetRenderWidth();
+        int w_height = Raylib.GetRenderHeight();
+
+        GRID_SIZE = Math.Min((int)(2 / 3f * (w_width - 2 * OFFSET_X) / w), (w_height - 2 * OFFSET_Y) / h);
+        LINE_WIDTH = GRID_SIZE / 30f;
+        Rlgl.SetLineWidth(LINE_WIDTH);
+
+        if (hollowCircle != null)
+            Raylib.UnloadRenderTexture(hollowCircle.Value);
+        hollowCircle = Raylib.LoadRenderTexture(GRID_SIZE, GRID_SIZE);
+        Raylib.BeginTextureMode(hollowCircle.Value);
+        Raylib.ClearBackground(Color.Blank);
+        Raylib.DrawCircle(GRID_SIZE / 2, GRID_SIZE / 2, GRID_SIZE / 4 + LINE_WIDTH / 2, Color.DarkGray);
+        Raylib.BeginBlendMode(BlendMode.SubtractColors);
+        Raylib.DrawCircle(GRID_SIZE / 2, GRID_SIZE / 2, GRID_SIZE / 4 - LINE_WIDTH / 2, Color.White);
+        Raylib.EndBlendMode();
+        Raylib.EndTextureMode();
+
+        int uiRight = GRID_SIZE * w + 3*OFFSET_X/2;
+
+        buttonBack = new(T("ui.back"), new Rectangle(uiRight, 500, 120, 40));
+        buttonNext = new(T("ui.next"), new Rectangle(uiRight + 130, 500, 120, 40));
+        buttonReset = new(T("ui.reset"), new Rectangle(uiRight, 450, 120, 40));
+        buttonUndo = new(T("ui.undo"), new Rectangle(uiRight + 130, 450, 120, 40));
+
+        buttonBack.OnClick = () =>
+        {
+            Runtime.SceneTransition(new LevelSelect());
+        };
+
+        buttonReset.OnClick = level.Reset;
+        buttonUndo.OnClick = level.Undo;
+        buttonNext.OnClick = () =>
+        {
+            var previousEntry = Runtime.Save.levelCompletion.FindIndex(c => c.chapter == level.Meta.chapter && c.level == level.Meta.level);
+            if (previousEntry != -1)
+            {
+                var (_, _, sol, gr) = Runtime.Save.levelCompletion[previousEntry];
+                if (gr < level.GetGrade().grade || sol.Length < level.MoveCount && gr <= level.GetGrade().grade)
+                    Runtime.Save.levelCompletion[previousEntry] = (level.Meta.chapter, level.Meta.level, level.Solution, level.GetGrade().grade);
+            }
+            else
+                Runtime.Save.levelCompletion.Add((level.Meta.chapter, level.Meta.level, level.Solution, level.GetGrade().grade));
+
+            Runtime.Save.Save();
+            // TODO: Just go to next level
+            Runtime.SceneTransition(new LevelSelect());
+        };
+
+        buttonNext.Disabled = true;
+
+        controls = [
+            buttonBack,
+            buttonNext,
+            buttonReset,
+            buttonUndo
+        ];
     }
 
     public void Update()
@@ -47,37 +115,12 @@ internal class LevelScene : Scene
                 case 'z':
                     level.Undo();
                     break;
-                case 'B':
-                case 'b':
-                    Runtime.SceneTransition(new LevelSelect());
-                    break;
             }
             keycode = (char)Raylib.GetCharPressed();
         }
-    }
 
-    private void RecalculateLayout()
-    {
-        int w = level.Width; int h = level.Height;
-        if (w == 0 || h == 0) return;
-        int w_width = Raylib.GetRenderWidth();
-        int w_height = Raylib.GetRenderHeight();
-
-        GRID_SIZE = Math.Min((int)(2/3f * (w_width - 2 * OFFSET_X) / w), (w_height - 2 * OFFSET_Y) / h);
-        LINE_WIDTH = GRID_SIZE / 30f;
-        TEXT_SIZE = Math.Min(GRID_SIZE / 5, OFFSET_Y - 10);
-        Rlgl.SetLineWidth(LINE_WIDTH);
-
-        if (hollowCircle != null)
-            Raylib.UnloadRenderTexture(hollowCircle.Value);
-        hollowCircle = Raylib.LoadRenderTexture(GRID_SIZE, GRID_SIZE);
-        Raylib.BeginTextureMode(hollowCircle.Value);
-        Raylib.ClearBackground(Color.Blank);
-        Raylib.DrawCircle(GRID_SIZE / 2, GRID_SIZE / 2, GRID_SIZE / 4 + LINE_WIDTH / 2, Color.DarkGray);
-        Raylib.BeginBlendMode(BlendMode.SubtractColors);
-        Raylib.DrawCircle(GRID_SIZE / 2, GRID_SIZE / 2, GRID_SIZE / 4 - LINE_WIDTH / 2, Color.White);
-        Raylib.EndBlendMode();
-        Raylib.EndTextureMode();
+        foreach (Control c in controls)
+            c.Update();
     }
 
     RenderTexture2D? hollowCircle = null;
@@ -85,14 +128,12 @@ internal class LevelScene : Scene
     public void Render()
     {
         Raylib.ClearBackground(Color.RayWhite);
-        if (Raylib.IsWindowResized())
-            RecalculateLayout();
 
         int w = level.Width;
         int h = level.Height;
 
-        Raylib.DrawText($"Level {level.Meta.chapter}-{level.Meta.level}: {level.Meta.name}", OFFSET_X, 12, TEXT_SIZE, Color.DarkGray);
-        Raylib.DrawText($"Moves: {level.MoveCount}", 2 * OFFSET_X + w * GRID_SIZE, 2 * OFFSET_Y, TEXT_SIZE, Color.DarkGray);
+        Raylib.DrawText($"{T("ui.level")} {level.Meta.chapter}-{level.Meta.level}: {T($"levels.{level.Meta.chapter}.{level.Meta.level}")}", OFFSET_X, 12, TEXT_SIZE, Color.DarkGray);
+        Raylib.DrawText($"{T("ui.moves")}: {level.MoveCount}", 2 * OFFSET_X + w * GRID_SIZE, OFFSET_Y, TEXT_SIZE, Color.DarkGray);
         
         Raylib.DrawRectangleLinesEx(new Rectangle(OFFSET_X, OFFSET_Y, GRID_SIZE * w, GRID_SIZE * h), LINE_WIDTH, Color.Black);
         for (int y = 0; y < h; y++)
@@ -150,18 +191,22 @@ internal class LevelScene : Scene
         var grade = level.GetGrade();
         if (grade.won)
         {
-            if (!written)
-            {
-                Console.WriteLine(string.Join(";", level.Solution));
-                written = true;
-            }
-            Raylib.DrawText($"You win! Grade: {gradeStrings[(int)grade.grade]}", 2 * OFFSET_X + w * GRID_SIZE, 3*OFFSET_Y, 20, Color.Black);
+            buttonNext.Disabled = false;
+            Raylib.DrawText($"{T("ui.win")} {T("ui.grade")}: {T($"ui.grade.{(int)grade.grade}")}", 2 * OFFSET_X + w * GRID_SIZE, 420, 20, Color.Black);
         }
 
         if (level.IsLost())
-            Raylib.DrawText($"Softlock :/ [R]/[Z]", 2 * OFFSET_X + w * GRID_SIZE, 5 * OFFSET_Y, 20, Color.Black);
+            Raylib.DrawText(T("ui.softlock"), 2 * OFFSET_X + w * GRID_SIZE, 420, 20, Color.Black);
+
+        Raylib.DrawTexturePro(armsCrossed,
+            new Rectangle(0, 0, armsCrossed.Width, armsCrossed.Height),
+            new Rectangle(2 * OFFSET_X + w * GRID_SIZE, 2*OFFSET_Y, 200, 300),
+            System.Numerics.Vector2.Zero, 0, Color.White
+        );
+
+        foreach (Control c in controls)
+            c.Render();
     }
-    bool written = false;
 
     public void Dispose()
     {

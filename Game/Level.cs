@@ -9,7 +9,7 @@ internal class Level
 {
     private LevelInfo template;
     
-    public (int chapter, int level, string name) Meta { get => (template.Chapter, template.LevelNum, template.Name); }
+    public (int chapter, int level) Meta { get => (template.Chapter, template.LevelNum); }
 
     public int Width { get => w; }
     public int Height { get => h; }

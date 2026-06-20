@@ -2,24 +2,24 @@
 
 namespace ColorDrain.UI.Controls;
 
-internal class Button(string text, int x, int y, int width, int height) : Control
+internal class Button(string text, Rectangle bounds) : Control
 {
     public int fontSize = 20;
 
     public string Text { get; set; } = text;
-    public int X { get; set; } = x;
-    public int Y { get; set; } = y;
-    public int Width { get; set; } = width;
-    public int Height { get; set; } = height;
+    public Rectangle Bounds { get; set; } = bounds;
     public Action? OnClick { get; set; }
 
     private bool hovering = false;
     private bool pressed = false;
 
+    public bool Disabled { get; set; } = false;
+
     public void Update()
     {
-        if (X < Raylib.GetMouseX() && Raylib.GetMouseX() < X + Width &&
-            Y < Raylib.GetMouseY() && Raylib.GetMouseY() < Y + Height)
+        if (Disabled) return;
+        if (Bounds.X < Raylib.GetMouseX() && Raylib.GetMouseX() < Bounds.X + Bounds.Width &&
+            Bounds.Y < Raylib.GetMouseY() && Raylib.GetMouseY() < Bounds.Y + Bounds.Height)
         {
             hovering = true;
             if (Raylib.IsMouseButtonPressed(MouseButton.Left))
@@ -40,9 +40,9 @@ internal class Button(string text, int x, int y, int width, int height) : Contro
     public void Render()
     {
         int t = Raylib.MeasureText(Text, fontSize);
-        Color color = pressed ? Color.Beige : hovering ? Color.Gray : Color.LightGray;
-        Raylib.DrawRectangleRec(new Rectangle(X, Y, Width, Height), color);
-        Raylib.DrawText(Text, X + (Width - t) / 2, Y + (Height - fontSize) / 2, fontSize, pressed ? Color.White : Color.Black);
-        Raylib.DrawRectangleLinesEx(new Rectangle(X, Y, Width, Height), 2, Color.Black);
+        Color color = Disabled ? Color.Gray : hovering ? pressed ? Color.Beige : Color.Gray : Color.LightGray;
+        Raylib.DrawRectangleRec(Bounds, color);
+        Raylib.DrawText(Text, (int)(Bounds.X + (Bounds.Width - t) / 2), (int)(Bounds.Y + (Bounds.Height - fontSize) / 2), fontSize, pressed && !Disabled ? Color.White : Color.Black);
+        Raylib.DrawRectangleLinesEx(Bounds, 2, Color.Black);
     }
 }

@@ -4,11 +4,10 @@ using ColorDrain.IO;
 using ColorDrain.UI;
 
 Runtime.Save.Load();
+AssetManager.LoadLanguage(Runtime.Save.language);
 
-Raylib.SetConfigFlags(ConfigFlags.Msaa4xHint | ConfigFlags.ResizableWindow);
+Raylib.SetConfigFlags(ConfigFlags.Msaa4xHint);
 Raylib.InitWindow(800, 600, "Color Drain");
-Raylib.SetWindowMinSize(800, 600);
-Raylib.SetWindowMaxSize(3840, 2160);
 
 Raylib.InitAudioDevice();
 

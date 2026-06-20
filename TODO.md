@@ -2,17 +2,19 @@
 
 - achievements
   - bread tastes better than key (get key grade once idfk)
-- braindead layout engine
-  - better buttons
-  - inspo: (https://www.youtube.com/watch?v=by9lQvpvMIc)[clay's layout algorithm]
-- dialog system for story (#niche)
+- dialog system for story
 - music and sfx
   - menu theme
   - chapter themes
   - click sfx, spread sfx, mix sfx, drain sfx
-- level progression (back, reset, next buttons; grading system for select menu, solution sharer, hint system)
+- level selector
+  - solution share
+  - hide levels that aren't unlocked yet
+- level scene
+  - hints support (or general how to play for first chapter)
+  - board backgrounds, crossed-arms art per chapter/grade
+  - better element textures
 - level builder
-- translation pack support (priority fetching via Runtime singleton)
 - story
   - axel prink (intern supervisor)
   - mistor olovich (manager)
