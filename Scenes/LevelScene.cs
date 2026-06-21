@@ -159,6 +159,11 @@ internal class LevelScene : Scene
                         }
                     }
                 }
+                if (x < w - 1 && level.GetWall((x, y), Direction.Right))
+                    Raylib.DrawLine(cx + GRID_SIZE, cy, cx + GRID_SIZE, cy + GRID_SIZE, Color.Black);
+                if (y < h - 1 && level.GetWall((x, y), Direction.Down))
+                    Raylib.DrawLine(cx, cy + GRID_SIZE, cx + GRID_SIZE, cy + GRID_SIZE, Color.Black);
+
                 if (field.element == null) continue;
                 switch (field.element)
                 {
@@ -183,7 +188,12 @@ internal class LevelScene : Scene
                 if (bordering.Select(c => {
                     var d = level.DropletAt(c);
                     return (same: d.HasValue, droplet: d);
-                }).Aggregate((c, a) => (c.same && c.droplet == a.droplet, a.droplet)).same)
+                }).Aggregate((c, a) => (c.same && c.droplet == a.droplet, a.droplet)).same &&
+                    !level.GetWall((x, y), Direction.Right) &&
+                    !level.GetWall((x, y), Direction.Down) &&
+                    !level.GetWall((x + 1, y), Direction.Down) &&
+                    !level.GetWall((x, y + 1), Direction.Right)
+                )
                     Raylib.DrawRectangle(cx + GRID_SIZE/2, cy + GRID_SIZE/2, GRID_SIZE, GRID_SIZE, level.DropletAt(bordering[0])!.Value);
             }
         }

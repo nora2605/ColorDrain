@@ -57,6 +57,16 @@ internal struct LevelInfo
                 int[] args = [.. tokens.Skip(1).Select(int.Parse)];
                 return new InitialDroplet((args[0], args[1]), (args[2], args[3], args[4]));
             }
+            case "WallV":
+            {
+                int[] args = [.. tokens.Skip(1).Select(int.Parse)];
+                return new Wall((args[0], args[1]), true);
+            }
+            case "WallH":
+            {
+                int[] args = [.. tokens.Skip(1).Select(int.Parse)];
+                return new Wall((args[0], args[1]), false);
+            }
             default:
                 throw new FormatException($"Unrecognized Element: {tokens[0]}");
         }

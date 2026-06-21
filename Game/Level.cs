@@ -21,6 +21,7 @@ internal class Level
     private bool[,] polarities;
     private SubColor?[,] droplets;
     private List<Element> elements;
+    private bool[] walls;
     private bool[,] hasElement;
     private int w, h;
 
@@ -38,8 +39,22 @@ internal class Level
         hasElement = new bool[w, h];
         elements = [];
         steps = [];
+        walls = new bool[w * (h-1) + h * (w-1)];
 
         Reset();
+    }
+
+    public bool GetWall(Coord coord, Direction direction)
+    {
+        if (direction == Direction.Left)
+            return coord.X <= 0 || GetWall((coord.X - 1, coord.Y), Direction.Right);
+        if (direction == Direction.Up)
+            return coord.Y <= 0 || GetWall((coord.X, coord.Y - 1), Direction.Down);
+        if (direction == Direction.Right)
+            return coord.X >= w - 1 || walls[coord.Y * (w - 1) + coord.X];
+        if (direction == Direction.Down)
+            return coord.Y >= h - 1 || walls[h * (w - 1) + coord.Y * w + coord.X];
+        return false;
     }
 
     public void Reset()
@@ -58,6 +73,11 @@ internal class Level
         {
             if (el is InitialDroplet d)
                 droplets[d.Position.X, d.Position.Y] = d.SColor;
+            else if (el is Wall wl)
+            {
+                walls[(wl.Vertical ? 0 : h * (w - 1)) + wl.Position.Y * (wl.Vertical ? w - 1 : w) + wl.Position.X] = true;
+                continue;
+            }
             else
             {
                 elements.Add(el);
@@ -133,10 +153,10 @@ internal class Level
     public IEnumerable<Coord> GetNeighbors(Coord coord)
     {
         List<Coord> neighbors = [];
-        if (coord.X > 0) neighbors.Add((coord.X - 1, coord.Y));
-        if (coord.X < w - 1) neighbors.Add((coord.X + 1, coord.Y));
-        if (coord.Y > 0) neighbors.Add((coord.X, coord.Y - 1));
-        if (coord.Y < h - 1) neighbors.Add((coord.X, coord.Y + 1));
+        if (!GetWall(coord, Direction.Left)) neighbors.Add((coord.X - 1, coord.Y));
+        if (!GetWall(coord, Direction.Right)) neighbors.Add((coord.X + 1, coord.Y));
+        if (!GetWall(coord, Direction.Up)) neighbors.Add((coord.X, coord.Y - 1));
+        if (!GetWall(coord, Direction.Down)) neighbors.Add((coord.X, coord.Y + 1));
         return neighbors;
     }
 
@@ -244,4 +264,12 @@ internal class Level
         }
         return false;
     }
+}
+
+enum Direction
+{
+    Left,
+    Right,
+    Up,
+    Down
 }

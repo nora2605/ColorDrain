@@ -28,6 +28,7 @@ namespace ColorDrain.IO
             {
                 var files = ListFiles($"Languages/{language}");
                 strings = files
+                    .Where(f => f.EndsWith(".strings")) // kv files, rest is dialogue or something
                     .Select(f => (realm: Path.GetFileNameWithoutExtension(f), lines: File.ReadAllLines(f)))
                     .Select(f => f.lines.Select(l => l.Split("===")).Select(l => KeyValuePair.Create($"{f.realm}.{l[0]}", l[1])))
                     .SelectMany(e => e)
