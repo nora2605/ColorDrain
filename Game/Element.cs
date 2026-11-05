@@ -5,4 +5,5 @@ namespace ColorDrain.Game;
 internal interface Element
 {
     public Coord Position { get; }
+    string ToString();
 }

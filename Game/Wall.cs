@@ -7,4 +7,5 @@ namespace ColorDrain.Game;
 
 internal record Wall(Coord Position, bool Vertical) : Element
 {
+    public override string ToString() => $"Wall {Position} {Vertical}";
 }

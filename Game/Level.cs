@@ -1,5 +1,6 @@
 ﻿using ColorDrain.IO;
 using ColorDrain.Maths;
+using System.ComponentModel;
 using System.ComponentModel.Design;
 using System.Data;
 
@@ -18,6 +19,7 @@ internal class Level
     public Coord[] Solution { get => [.. steps]; }
     private List<Coord> steps;
 
+    // false => blocked, true => free
     private bool[,] polarities;
     private SubColor?[,] droplets;
     private List<Element> elements;
@@ -44,18 +46,28 @@ internal class Level
         Reset();
     }
 
-    public bool GetWall(Coord coord, Direction direction)
+    private Level(Level source)
     {
-        if (direction == Direction.Left)
-            return coord.X <= 0 || GetWall((coord.X - 1, coord.Y), Direction.Right);
-        if (direction == Direction.Up)
-            return coord.Y <= 0 || GetWall((coord.X, coord.Y - 1), Direction.Down);
-        if (direction == Direction.Right)
-            return coord.X >= w - 1 || walls[coord.Y * (w - 1) + coord.X];
-        if (direction == Direction.Down)
-            return coord.Y >= h - 1 || walls[h * (w - 1) + coord.Y * w + coord.X];
-        return false;
+        template = source.template;
+        w = source.w;
+        h = source.h;
+        polarities = (bool[,])source.polarities.Clone();
+        droplets = (SubColor?[,])source.droplets.Clone();
+        hasElement = (bool[,])source.hasElement.Clone();
+        walls = (bool[])source.walls.Clone();
+        elements = [.. source.elements];
+        steps = [.. source.steps];
     }
+    internal Level Clone() => new(this);
+
+    public bool GetWall(Coord coord, Direction direction) => direction switch
+    {
+        Direction.Left => coord.X <= 0 || walls[coord.Y * (w - 1) + coord.X - 1],
+        Direction.Right => coord.X >= w - 1 || walls[coord.Y * (w - 1) + coord.X],
+        Direction.Up => coord.Y <= 0 || walls[h * (w - 1) + (coord.Y - 1) * w + coord.X],
+        Direction.Down => coord.Y >= h - 1 || walls[h * (w - 1) + coord.Y * w + coord.X],
+        _ => false
+    };
 
     public void Reset()
     {
@@ -140,11 +152,11 @@ internal class Level
                 case Drain d:
                     if (!d.Filled)
                         foreach (var (nx, ny) in GetNeighbors(d.Position))
-                            if (droplets[nx, ny].HasValue && droplets[nx, ny]!.Value == d.SColor)
-                            {
-                                DrainConnectedRegion(nx, ny);
-                                elements[i] = d with { Filled = true };
-                            }
+                        if (droplets[nx, ny].HasValue && droplets[nx, ny]!.Value == d.SColor)
+                        {
+                            DrainConnectedRegion(nx, ny);
+                            elements[i] = d with { Filled = true };
+                        }
                     break;
             }
         }
@@ -152,12 +164,10 @@ internal class Level
 
     public IEnumerable<Coord> GetNeighbors(Coord coord)
     {
-        List<Coord> neighbors = [];
-        if (!GetWall(coord, Direction.Left)) neighbors.Add((coord.X - 1, coord.Y));
-        if (!GetWall(coord, Direction.Right)) neighbors.Add((coord.X + 1, coord.Y));
-        if (!GetWall(coord, Direction.Up)) neighbors.Add((coord.X, coord.Y - 1));
-        if (!GetWall(coord, Direction.Down)) neighbors.Add((coord.X, coord.Y + 1));
-        return neighbors;
+        if (!GetWall(coord, Direction.Left)) yield return (coord.X - 1, coord.Y);
+        if (!GetWall(coord, Direction.Right)) yield return (coord.X + 1, coord.Y);
+        if (!GetWall(coord, Direction.Up)) yield return (coord.X, coord.Y - 1);
+        if (!GetWall(coord, Direction.Down)) yield return (coord.X, coord.Y + 1);
     }
 
     private void DrainConnectedRegion(int x, int y)

@@ -38,7 +38,7 @@ internal class NewSaveScene : Scene
     {
         switch (new string([.. nameInput.Value.ToLower().Where(char.IsAsciiLetter)]))
         {
-            case "beatriceshunt":
+            case "januaryshunt":
             case "axelprink":
             case "mrolovich":
             case "mistorolovich":
